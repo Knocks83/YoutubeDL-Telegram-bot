@@ -68,8 +68,12 @@ def sendVideo(bot, botogram, chat, message, args, destChatID):
                     for data in video.iter_content(1024*1024*10):
                         # Increase the downloaded bytes counter
                         downloaded_bytes += len(data)
-                        downloadingMessage.edit(format('Downloading... %.0f%%' % (
-                            downloaded_bytes/total_size_in_bytes*100)))  # %% is the percent sign
+                        text = format('Downloading... %.0f%%' %
+                                      (downloaded_bytes/total_size_in_bytes*100))
+                        if downloadingMessage.text != text:
+                            # %% is the percent sign
+                            downloadingMessage.edit(text)
+
                         f.write(data)  # Write to file
 
                 except Exception as e:
@@ -106,7 +110,7 @@ def sendVideo(bot, botogram, chat, message, args, destChatID):
 def batchSend(bot, botogram, chat, args, destChatID):
     if len(args) >= 1:
         for link in args:
-            res = download.getDownloadLink(args[0])
+            res = download.getDownloadLink(link)
             if res is not False:
                 if 'title' in res:
                     # Open a file that's going to contain the download
@@ -129,8 +133,12 @@ def batchSend(bot, botogram, chat, args, destChatID):
                         for data in video.iter_content(1024*1024*10):
                             # Increase the downloaded bytes counter
                             downloaded_bytes += len(data)
-                            downloadingMessage.edit(format('Downloading ' + link + '... %.0f%%' % (
-                                downloaded_bytes/total_size_in_bytes*100)))  # %% is the percent sign
+                            text = format('Downloading ' + link + '... %.0f%%' %
+                                          (downloaded_bytes/total_size_in_bytes*100))
+                            if downloadingMessage.text != text:
+                                # %% is the percent sign
+                                downloadingMessage.edit(text)
+
                             f.write(data)  # Write to file
 
                     except Exception as e:
@@ -150,7 +158,7 @@ def batchSend(bot, botogram, chat, args, destChatID):
                         'Uploading ' + link + '...', preview=False)
                     # Create the button
                     buttons = botogram.Buttons()
-                    buttons[0].url("Link", args[0])
+                    buttons[0].url("Link", link)
 
                     # Send the video
                     bot.chat(destChatID).send_video(path=filename,
