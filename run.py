@@ -84,7 +84,7 @@ def sendVideo(bot, botogram, chat, message, args, destChatID):
                     os.remove(filename)
                     return
 
-                chat.delete_message(downloadingMessage)
+                downloadingMessage.delete()
 
                 # Set the pointer back to the start of the file
                 f.seek(0, os.SEEK_SET)
@@ -95,11 +95,19 @@ def sendVideo(bot, botogram, chat, message, args, destChatID):
                 buttons = botogram.Buttons()
                 buttons[0].url("Link", args[0])
 
-                # Send the video
-                bot.chat(destChatID).send_video(path=filename,
-                                                caption=res['title'], attach=buttons)
+                if 'thumbnail' in res:
+                    # Download the thumb
+                    thumbFile = open(filename+'thumb', 'wb+')
+                    thumbFile.write(get(res['thumbnail']).content)
+                    thumbFile.close()
+                    
+                    # Send the video
+                    bot.chat(destChatID).send_video(path=filename, thumb=filename+'thumb', caption=res['title'], attach=buttons)
+                    os.remove(filename+'thumb')
+                else:
+                    bot.chat(destChatID).send_video(path=filename, caption=res['title'], attach=buttons)
 
-                chat.delete_message(uploadingMessage)
+                uploadingMessage.delete()
                 # Delete the temp file
                 f.close()
                 os.remove(filename)
@@ -134,10 +142,9 @@ def batchSend(bot, botogram, chat, args, destChatID):
                             # Increase the downloaded bytes counter
                             downloaded_bytes += len(data)
                             text = format('Downloading ' + link + '... %.0f%%' %
-                                          (downloaded_bytes/total_size_in_bytes*100))
+                                          (downloaded_bytes/total_size_in_bytes*100)) # %% is the percent sign
                             if downloadingMessage.text != text:
-                                # %% is the percent sign
-                                downloadingMessage.edit(text)
+                                downloadingMessage.edit(text, preview=False)
 
                             f.write(data)  # Write to file
 
@@ -149,22 +156,32 @@ def batchSend(bot, botogram, chat, args, destChatID):
                         os.remove(filename)
                         return
 
-                    chat.delete_message(downloadingMessage)
+                    downloadingMessage.delete()
 
                     # Set the pointer back to the start of the file
                     f.seek(0, os.SEEK_SET)
+
                     # Send the uploading message
                     uploadingMessage = chat.send(
                         'Uploading ' + link + '...', preview=False)
+
                     # Create the button
                     buttons = botogram.Buttons()
                     buttons[0].url("Link", link)
 
-                    # Send the video
-                    bot.chat(destChatID).send_video(path=filename,
-                                                    caption=res['title'], attach=buttons)
+                    if 'thumbnail' in res:
+                        # Download the thumb
+                        thumbFile = open(filename+'thumb', 'wb+')
+                        thumbFile.write(get(res['thumbnail']).content)
+                        thumbFile.close()
+                        
+                        # Send the video
+                        bot.chat(destChatID).send_video(path=filename, thumb=filename+'thumb', caption=res['title'], attach=buttons)
+                        os.remove(filename+'thumb')
+                    else:
+                        bot.chat(destChatID).send_video(path=filename, caption=res['title'], attach=buttons)
 
-                    chat.delete_message(uploadingMessage)
+                    uploadingMessage.delete()
                     # Delete the temp file
                     f.close()
                     os.remove(filename)
