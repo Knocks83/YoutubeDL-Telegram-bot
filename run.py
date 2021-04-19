@@ -6,9 +6,6 @@ import json
 import download
 import config as cfg
 
-botToken = "1614607267:AAGnzUBwEGmSCgxgd-aJmPd24sc8sTHp7Es"
-chatID = -1001338642998
-
 workingDirectory = os.path.dirname(os.path.realpath(__file__))
 
 # END CONFIGURATION
