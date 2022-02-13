@@ -2,12 +2,36 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Updater, CommandHandler, CallbackContext, Dispatcher
 import config as cfg
 
+import unicodedata
+import re
+
 import download
 from requests import get
 import os
 
 
 workingDirectory = os.path.dirname(os.path.realpath(__file__))
+
+
+# Brutally stolen from Django (https://github.com/django/django/blob/main/django/utils/text.py)
+def slugify(value, allow_unicode=True):
+    """
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize("NFKC", value)
+    else:
+        value = (
+            unicodedata.normalize("NFKD", value)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+    value = re.sub(r"[^\w\s-]", "", value.lower())
+    return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
 def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=None):
@@ -20,7 +44,7 @@ def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=N
             if res is not False:
                 if 'title' in res:
                     # Open a file that's going to contain the download
-                    filename = workingDirectory + '/' + res['title']
+                    filename = slugify(workingDirectory + '/' + res['title'])
                     f = open(filename + '.mp4', 'wb+')
 
                     downloadingMessage = update.message.reply_text(
