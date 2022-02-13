@@ -1,12 +1,11 @@
 from youtube_dl import YoutubeDL
 
-options = {
-    'format': 'mp4[protocol^=http]',
-    'quiet': True
-}
-
 
 def getDownloadLink(url):
+    options = {
+#        'format': 'bestvideo[ext=mp4]',
+        'quiet': True
+    }
     try:
         with YoutubeDL(options) as ydl:
             videoInfos = ydl.extract_info(
@@ -27,3 +26,13 @@ def getDownloadLink(url):
     except Exception:
         print("Error!")
         return False
+
+
+def download(url: str, filename: str) -> bool:
+    options = {
+        'format': 'mp4',
+        'outtmpl':  filename,
+        'quiet': True
+    }
+    with YoutubeDL(options) as ydl:
+        ydl.download([url])

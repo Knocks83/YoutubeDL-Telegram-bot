@@ -44,46 +44,26 @@ def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=N
             if res is not False:
                 if 'title' in res:
                     # Open a file that's going to contain the download
-                    filename = slugify(workingDirectory + '/' + res['title'])
-                    f = open(filename + '.mp4', 'wb+')
+                    filename = workingDirectory + '/' + slugify(res['title'])
 
                     downloadingMessage = update.message.reply_text(
-                        'Downloading ' + link + '... 0%', disable_web_page_preview=True)
+                        'Downloading ' + link + '...', disable_web_page_preview=True)
+                    
+                    # Download the file via youtube-dl
                     try:
-                        # Download the URL provided by Youtube_DL
-                        video = get(res['url'], stream=True)
-
-                        # Get the size of the file, plus set a variable that'll contain how much has already been downloaded in bytes
-                        total_size_in_bytes = int(
-                            video.headers.get('content-length', 0))
-                        downloaded_bytes = 0
-
-                        # Every 10 megabytes
-                        for data in video.iter_content(1024*1024*10):
-                            # Increase the downloaded bytes counter
-                            downloaded_bytes += len(data)
-                            text = format('Downloading ' + link + '... %.0f%%' %
-                                          (downloaded_bytes/total_size_in_bytes*100)) # %% is the percent sign
-                            if downloadingMessage.text != text:
-                                try:
-                                    downloadingMessage.edit_text(text, disable_web_page_preview=True)
-                                except:
-                                    pass
-
-                            f.write(data)  # Write to file
-
+                        download.download(link, filename+'.mp4')
                     except Exception as e:
-                        # Send the error and delete the file
-                        downloadingMessage.edit_text(
-                            "Error while downloading! " + str(e))
-                        f.close()
-                        os.remove(filename)
-                        return
+                        print(e)
+                        downloadingMessage.edit_text(str(e))
+                        try:
+                            os.remove(filename+'.mp4')
+                        except:
+                            pass
 
                     downloadingMessage.delete()
 
-                    # Set the pointer back to the start of the file
-                    f.seek(0, os.SEEK_SET)
+                    # Open the file to upload it
+                    f = open(filename + '.mp4', 'rb')
 
                     # Send the uploading message
                     uploadingMessage = update.message.reply_text(
