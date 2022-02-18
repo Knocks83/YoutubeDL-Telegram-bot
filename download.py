@@ -23,8 +23,39 @@ def getDownloadLink(url):
 
             return infosToReturn
 
-    except Exception:
-        print("Error!")
+    except Exception as e:
+        print("Error!", e)
+        return False
+
+
+def getChannelVideos(url):
+    options = {
+        'quiet': True
+    }
+    try:
+        with YoutubeDL(options) as ydl:
+            channelVideos = ydl.extract_info(
+                url,
+                download=False  # We just want to extract the info
+            )
+            videos = []
+            for entry in channelVideos['entries']:
+                infosToReturn = {}
+                infosToReturn['webpage_url'] = entry['webpage_url']
+                infosToReturn['url'] = entry['url']
+                if 'title' in entry:
+                    infosToReturn['title'] = entry['title']
+                if 'uploader' in entry:
+                    infosToReturn['uploader'] = entry['uploader']
+                if 'thumbnail' in entry:
+                    infosToReturn['thumbnail'] = entry['thumbnail']
+                
+                videos.append(infosToReturn)
+
+            return videos
+
+    except Exception as e:
+        print("Error!", e)
         return False
 
 
