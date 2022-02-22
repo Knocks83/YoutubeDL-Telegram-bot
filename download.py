@@ -42,7 +42,6 @@ def getChannelVideos(url):
             for entry in channelVideos['entries']:
                 infosToReturn = {}
                 infosToReturn['webpage_url'] = entry['webpage_url']
-                infosToReturn['url'] = entry['url']
                 if 'title' in entry:
                     infosToReturn['title'] = entry['title']
                 if 'uploader' in entry:

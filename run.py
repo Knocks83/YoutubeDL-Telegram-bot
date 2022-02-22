@@ -1,6 +1,8 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.error import RetryAfter
 import config as cfg
+from time import sleep
 
 import unicodedata
 import re
@@ -34,6 +36,59 @@ def slugify(value, allow_unicode=True):
     return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
+def sendLink(video, link, filename, update, context, destChatID):
+    if 'title' in video:
+        downloadingMessage = update.message.reply_text(
+            'Downloading ' + link + '...', disable_web_page_preview=True)
+        
+        # Download the file via youtube-dl
+        try:
+            download.download(link, filename+'.mp4')
+        except Exception as e:
+            print(e)
+            downloadingMessage.edit_text('Error while downloading ' + link + ' - ' + str(e))
+            try:
+                os.remove(filename+'.mp4')
+            except:
+                pass
+            
+            return
+
+        downloadingMessage.delete()
+
+        if not os.stat(filename + '.mp4'):
+            update.message.reply_text('Error while downloading ' + link)
+            return
+
+        # Open the file to upload it
+        f = open(filename + '.mp4', 'rb')
+
+        # Send the uploading message
+        uploadingMessage = update.message.reply_text(
+            'Uploading ' + link + '...', disable_web_page_preview=True)
+
+        # Create the button
+        buttons = InlineKeyboardMarkup([[InlineKeyboardButton("Link", link)]])
+
+        if 'thumbnail' in video:
+            # Download the thumb
+            thumbFile = open(filename+'.jpg', 'wb+')
+            thumbFile.write(get(video['thumbnail']).content)
+            thumbFile.seek(0, os.SEEK_SET)
+            
+            # Send the video
+            context.bot.send_video(chat_id=destChatID, video=f, thumb=thumbFile, caption=video['title'], reply_markup=buttons, supports_streaming=True)
+            thumbFile.close()
+            os.remove(filename+'.jpg')
+        else:
+            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True)
+
+        uploadingMessage.delete()
+        # Delete the temp file
+        f.close()
+        os.remove(filename + '.mp4')
+
+
 def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=None):
     if destChatID is None:
         destChatID = update.message.chat_id
@@ -42,59 +97,25 @@ def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=N
         for link in args:
             res = download.getDownloadLink(link)
             if res is not False:
-                if 'title' in res:
-                    # Open a file that's going to contain the download
-                    filename = workingDirectory + '/' + slugify(res['title'])
+                filename = workingDirectory + '/' + slugify(res['title'])
 
-                    downloadingMessage = update.message.reply_text(
-                        'Downloading ' + link + '...', disable_web_page_preview=True)
-                    
-                    # Download the file via youtube-dl
-                    try:
-                        download.download(link, filename+'.mp4')
-                    except Exception as e:
-                        print(e)
-                        downloadingMessage.edit_text('Error while downloading ' + link + ' - ' + str(e))
-                        try:
-                            os.remove(filename+'.mp4')
-                        except:
-                            pass
-                        
-                        continue
+                try:
+                    sendLink(res, link, filename, update, context, destChatID)
+                except RetryAfter as e:
+                    sleep(e.retry_after + 1)
 
-                    downloadingMessage.delete()
+                
+                # Retry removing the files, in case the function got an error
+                try:
+                    os.remove(filename + '.jpg')
+                except Exception:
+                    pass
 
-                    if not os.stat(filename + '.mp4'):
-                        update.message.reply_text('Error while downloading ' + link)
-                        continue
-
-                    # Open the file to upload it
-                    f = open(filename + '.mp4', 'rb')
-
-                    # Send the uploading message
-                    uploadingMessage = update.message.reply_text(
-                        'Uploading ' + link + '...', disable_web_page_preview=True)
-
-                    # Create the button
-                    buttons = InlineKeyboardMarkup([[InlineKeyboardButton("Link", link)]])
-
-                    if 'thumbnail' in res:
-                        # Download the thumb
-                        thumbFile = open(filename+'.jpg', 'wb+')
-                        thumbFile.write(get(res['thumbnail']).content)
-                        thumbFile.seek(0, os.SEEK_SET)
-                        
-                        # Send the video
-                        context.bot.send_video(chat_id=destChatID, video=f, thumb=thumbFile, caption=res['title'], reply_markup=buttons, supports_streaming=True)
-                        thumbFile.close()
-                        os.remove(filename+'.jpg')
-                    else:
-                        context.bot.send_video(chat_id=destChatID, video=f, caption=res['title'], reply_markup=buttons, supports_streaming=True)
-
-                    uploadingMessage.delete()
-                    # Delete the temp file
-                    f.close()
+                try:
                     os.remove(filename + '.mp4')
+                except Exception:
+                    pass
+                    
             else:
                 update.message.reply_text('Error with Youtube DL!')
 
@@ -112,59 +133,25 @@ def downloadChannel(update: Update, context: CallbackContext, args: list, destCh
             if videos is not False:
                 for video in videos:
                     link = video['webpage_url']
-                    if 'title' in video:
-                        # Open a file that's going to contain the download
-                        filename = workingDirectory + '/' + slugify(video['title'])
+                    filename = workingDirectory + '/' + slugify(video['title'])
 
-                        downloadingMessage = update.message.reply_text(
-                            'Downloading ' + link + '...', disable_web_page_preview=True)
-                        
-                        # Download the file via youtube-dl
-                        try:
-                            download.download(link, filename+'.mp4')
-                        except Exception as e:
-                            print(e)
-                            downloadingMessage.edit_text('Error while downloading ' + link + ' - ' + str(e))
-                            try:
-                                os.remove(filename+'.mp4')
-                            except:
-                                pass
-                            
-                            continue
+                    try:
+                        sendLink(video, link, update, context, destChatID)
+                    except RetryAfter as e:
+                        sleep(e.retry_after + 1)
 
-                        downloadingMessage.delete()
+                    
+                    # Retry removing the files, in case the function got an error
+                    try:
+                        os.remove(filename + '.jpg')
+                    except Exception:
+                        pass
 
-                        if not os.stat(filename + '.mp4'):
-                            update.message.reply_text('Error while downloading ' + link)
-                            continue
-
-                        # Open the file to upload it
-                        f = open(filename + '.mp4', 'rb')
-
-                        # Send the uploading message
-                        uploadingMessage = update.message.reply_text(
-                            'Uploading ' + link + '...', disable_web_page_preview=True)
-
-                        # Create the button
-                        buttons = InlineKeyboardMarkup([[InlineKeyboardButton("Link", link)]])
-
-                        if 'thumbnail' in video:
-                            # Download the thumb
-                            thumbFile = open(filename+'.jpg', 'wb+')
-                            thumbFile.write(get(video['thumbnail']).content)
-                            thumbFile.seek(0, os.SEEK_SET)
-                            
-                            # Send the video
-                            context.bot.send_video(chat_id=destChatID, video=f, thumb=thumbFile, caption=video['title'], reply_markup=buttons, supports_streaming=True)
-                            thumbFile.close()
-                            os.remove(filename+'.jpg')
-                        else:
-                            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True)
-
-                        uploadingMessage.delete()
-                        # Delete the temp file
-                        f.close()
+                    try:
                         os.remove(filename + '.mp4')
+                    except Exception:
+                        pass
+                    
             else:
                 update.message.reply_text('Error with Youtube DL!')
 
