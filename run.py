@@ -136,7 +136,7 @@ def downloadChannel(update: Update, context: CallbackContext, args: list, destCh
                     filename = workingDirectory + '/' + slugify(video['title'])
 
                     try:
-                        sendLink(video, link, update, context, destChatID)
+                        sendLink(video, link, filename, update, context, destChatID)
                     except RetryAfter as e:
                         sleep(e.retry_after + 1)
 
