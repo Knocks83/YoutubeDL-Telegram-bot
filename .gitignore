@@ -1,2 +1,5 @@
 config.py
 __pycache__
+*.jpg
+*.mp4
+env
