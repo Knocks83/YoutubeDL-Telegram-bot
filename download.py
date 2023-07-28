@@ -14,6 +14,8 @@ def getDownloadLink(url):
             )
             infosToReturn = {}
             infosToReturn['url'] = videoInfos['url']
+            infosToReturn['width'] = videoInfos['width']
+            infosToReturn['height'] = videoInfos['height']
             if 'title' in videoInfos:
                 infosToReturn['title'] = videoInfos['title']
             if 'uploader' in videoInfos:

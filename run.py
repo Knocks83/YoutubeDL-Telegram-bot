@@ -77,11 +77,11 @@ def sendLink(video, link, filename, update, context, destChatID):
             thumbFile.seek(0, os.SEEK_SET)
             
             # Send the video
-            context.bot.send_video(chat_id=destChatID, video=f, thumb=thumbFile, caption=video['title'], reply_markup=buttons, supports_streaming=True)
+            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'], thumb=thumbFile)
             thumbFile.close()
             os.remove(filename+'.jpg')
         else:
-            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True)
+            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'])
 
         uploadingMessage.delete()
         # Delete the temp file
