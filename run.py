@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext, Application
 from telegram.error import RetryAfter
 import config as cfg
 from time import sleep
@@ -36,17 +36,16 @@ def slugify(value, allow_unicode=True):
     return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
-def sendLink(video, link, filename, update, context, destChatID):
+async def sendLink(video, link, filename, update, context, destChatID):
     if 'title' in video:
-        downloadingMessage = update.message.reply_text(
-            'Downloading ' + link + '...', disable_web_page_preview=True)
+        downloadingMessage = await update.message.reply_text('Downloading ' + link + '...', disable_web_page_preview=True)
         
         # Download the file via youtube-dl
         try:
             download.download(link, filename+'.mp4')
         except Exception as e:
             print(e)
-            downloadingMessage.edit_text('Error while downloading ' + link + ' - ' + str(e))
+            await downloadingMessage.edit_text('Error while downloading ' + link + ' - ' + str(e))
             try:
                 os.remove(filename+'.mp4')
             except:
@@ -54,18 +53,17 @@ def sendLink(video, link, filename, update, context, destChatID):
             
             return
 
-        downloadingMessage.delete()
+        await downloadingMessage.delete()
 
         if not os.stat(filename + '.mp4'):
-            update.message.reply_text('Error while downloading ' + link)
+            await update.message.reply_text('Error while downloading ' + link)
             return
 
         # Open the file to upload it
         f = open(filename + '.mp4', 'rb')
 
         # Send the uploading message
-        uploadingMessage = update.message.reply_text(
-            'Uploading ' + link + '...', disable_web_page_preview=True)
+        uploadingMessage = await update.message.reply_text('Uploading ' + link + '...', disable_web_page_preview=True)
 
         # Create the button
         buttons = InlineKeyboardMarkup([[InlineKeyboardButton("Link", link)]])
@@ -77,20 +75,20 @@ def sendLink(video, link, filename, update, context, destChatID):
             thumbFile.seek(0, os.SEEK_SET)
             
             # Send the video
-            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'], thumb=thumbFile, write_timeout=60)
+            await context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'], thumbnail=thumbFile)
             thumbFile.close()
             os.remove(filename+'.jpg')
         else:
-            context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'], write_timeout=60)
+            await context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'])
 
-        uploadingMessage.edit_text('Upload complete! ✅')
+        await uploadingMessage.edit_text('Upload complete! ✅')
 
         # Delete the temp file
         f.close()
         os.remove(filename + '.mp4')
 
 
-def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=None):
+async def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=None):
     if destChatID is None:
         destChatID = update.message.chat_id
     
@@ -101,7 +99,7 @@ def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=N
                 filename = workingDirectory + '/' + slugify(res['title'])
 
                 try:
-                    sendLink(res, link, filename, update, context, destChatID)
+                    await sendLink(res, link, filename, update, context, destChatID)
                 except RetryAfter as e:
                     sleep(e.retry_after + 1)
 
@@ -118,16 +116,15 @@ def sendVideo(update: Update, context: CallbackContext, args: list, destChatID=N
                     pass
                     
             else:
-                update.message.reply_text('Error with Youtube DL!')
+                await update.message.reply_text('Error with Youtube DL!')
 
-def downloadChannel(update: Update, context: CallbackContext, args: list, destChatID=None):
+async def downloadChannel(update: Update, context: CallbackContext, args: list, destChatID=None):
     if destChatID is None:
         destChatID = update.message.chat_id
     
     if len(args) >= 1:
         for channel in args:
-            crawlingMessage = update.message.reply_text(
-                            'Crawling the videos...')
+            crawlingMessage = await update.message.reply_text('Crawling the videos...')
             videos = download.getChannelVideos(channel)
             crawlingMessage.delete()
 
@@ -137,7 +134,7 @@ def downloadChannel(update: Update, context: CallbackContext, args: list, destCh
                     filename = workingDirectory + '/' + slugify(video['title'])
 
                     try:
-                        sendLink(video, link, filename, update, context, destChatID)
+                        await sendLink(video, link, filename, update, context, destChatID)
                     except RetryAfter as e:
                         sleep(e.retry_after + 1)
 
@@ -154,32 +151,38 @@ def downloadChannel(update: Update, context: CallbackContext, args: list, destCh
                         pass
                     
             else:
-                update.message.reply_text('Error with Youtube DL!')
+                await update.message.reply_text('Error with Youtube DL!')
 
 
-def download_handler(update: Update, context: CallbackContext):
-    sendVideo(update, context, context.args)
+async def download_handler(update: Update, context: CallbackContext):
+    await sendVideo(update, context, context.args)
 
-def cdownload_handler(update: Update, context: CallbackContext):
-    sendVideo(update, context, context.args, destChatID=cfg.chatID)
+async def cdownload_handler(update: Update, context: CallbackContext):
+    await sendVideo(update, context, context.args, destChatID=cfg.chatID)
 
-def channel_handler(update: Update, context: CallbackContext):
-    downloadChannel(update, context, context.args)
+async def channel_handler(update: Update, context: CallbackContext):
+    await downloadChannel(update, context, context.args)
 
-def cchannel_handler(update: Update, context: CallbackContext):
-    downloadChannel(update, context, context.args, destChatID=cfg.chatID)
+async def cchannel_handler(update: Update, context: CallbackContext):
+    await downloadChannel(update, context, context.args, destChatID=cfg.chatID)
 
-def help(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Commands:\n- /download: Download the media and send it in this chat\n- /cdownload: Download the media and send it to the chat whose ID is in the config file\n-/channel: Download all the media of a channel and send it in this chat\n-/cchannel: Download all the media of a channel and send it to the chat whose ID is in the config file')
+async def help(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text('Commands:\n- /download: Download the media and send it in this chat\n- /cdownload: Download the media and send it to the chat whose ID is in the config file\n-/channel: Download all the media of a channel and send it in this chat\n-/cchannel: Download all the media of a channel and send it to the chat whose ID is in the config file')
 
 
-updater = Updater(token=cfg.botToken, base_url=cfg.endpoint)
-updater.dispatcher.add_handler(CommandHandler('start', help))
-updater.dispatcher.add_handler(CommandHandler('help', help))
-updater.dispatcher.add_handler(CommandHandler('download', download_handler))
-updater.dispatcher.add_handler(CommandHandler('cdownload', cdownload_handler))
-updater.dispatcher.add_handler(CommandHandler('channel', channel_handler))
-updater.dispatcher.add_handler(CommandHandler('cchannel', cchannel_handler))
+application = (
+    Application.builder()
+    .base_url(cfg.endpoint)
+    .token(cfg.botToken)
+    .write_timeout(60)
+    .build()
+)
 
-updater.start_polling()
-updater.idle()
+application.add_handler(CommandHandler('start', help))
+application.add_handler(CommandHandler('help', help))
+application.add_handler(CommandHandler('download', download_handler))
+application.add_handler(CommandHandler('cdownload', cdownload_handler))
+application.add_handler(CommandHandler('channel', channel_handler))
+application.add_handler(CommandHandler('cchannel', cchannel_handler))
+
+application.run_polling()
