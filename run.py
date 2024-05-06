@@ -83,7 +83,8 @@ def sendLink(video, link, filename, update, context, destChatID):
         else:
             context.bot.send_video(chat_id=destChatID, video=f, caption=video['title'], reply_markup=buttons, supports_streaming=True, width=video['width'], height=video['height'], write_timeout=60)
 
-        uploadingMessage.delete()
+        uploadingMessage.edit_text('Upload complete! ✅')
+
         # Delete the temp file
         f.close()
         os.remove(filename + '.mp4')
