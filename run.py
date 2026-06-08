@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Updater, CommandHandler, CallbackContext, Application
+from telegram.ext import CommandHandler, CallbackContext, Application
 from telegram.error import RetryAfter
 import config as cfg
 from time import sleep
@@ -174,6 +174,7 @@ application = (
     Application.builder()
     .base_url(cfg.endpoint)
     .token(cfg.botToken)
+    .read_timeout(60)
     .write_timeout(60)
     .build()
 )

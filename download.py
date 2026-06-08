@@ -1,9 +1,12 @@
 from yt_dlp import YoutubeDL
+from yt_dlp.networking.impersonate import ImpersonateTarget
 
 
 def getDownloadLink(url):
     options = {
 #        'format': 'bestvideo[ext=mp4]',
+        'impersonate': ImpersonateTarget.from_str('chrome'),
+        'no-cookies': True,
         'quiet': True
     }
     try:
